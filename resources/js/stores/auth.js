@@ -40,5 +40,23 @@ export const useAuthStore = defineStore('auth', {
             this.user = data.user;
             localStorage.setItem('auth_user', JSON.stringify(data.user));
         },
+
+        async fetchProfile() {
+            const { data } = await client.get('/v1/profile');
+            this.user = data.user;
+            localStorage.setItem('auth_user', JSON.stringify(data.user));
+            return data.user;
+        },
+
+        async updateProfile(payload) {
+            const { data } = await client.put('/v1/profile', payload);
+            this.user = data.user;
+            localStorage.setItem('auth_user', JSON.stringify(data.user));
+            return data.user;
+        },
+
+        async changePassword(payload) {
+            await client.put('/v1/profile/password', payload);
+        },
     },
 });

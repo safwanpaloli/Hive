@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { usePostsStore } from '../stores/posts';
 import { useAccountsStore } from '../stores/accounts';
 import ScriptEditor from '../components/ScriptEditor.vue';
+import ScriptDetailModal from '../components/ScriptDetailModal.vue';
 import StatusBadge from '../components/StatusBadge.vue';
 import PlatformBadge from '../components/PlatformBadge.vue';
 import { formatDateTime } from '../utils/format';
@@ -17,6 +18,8 @@ const toast = useToast();
 
 const editorOpen = ref(false);
 const editingPost = ref(null);
+const detailOpen = ref(false);
+const detailPost = ref(null);
 const deleteTarget = ref(null);
 
 const filterStatus = ref(posts.filters.status || '');
@@ -39,9 +42,25 @@ onMounted(async () => {
 });
 
 function openEditor(post) {
+    detailOpen.value = false;
+    detailPost.value = null;
     editingPost.value = post;
     editorOpen.value = true;
     router.replace({ name: 'scripts' });
+}
+
+function copyScript(post) {
+    openEditor({
+        ...post,
+        id: null,
+        title: `${post.title} (Copy)`,
+        status: 'draft',
+    });
+}
+
+function openDetail(post) {
+    detailPost.value = post;
+    detailOpen.value = true;
 }
 
 function applyFilters() {
@@ -165,7 +184,7 @@ async function confirmDelete() {
                 v-for="post in posts.posts"
                 :key="post.id"
                 class="flex cursor-pointer flex-col rounded-2xl bg-white p-5 shadow-sm ring-1 ring-slate-200 transition hover:shadow-md hover:ring-brand-200"
-                @click="openEditor(post)"
+                @click="openDetail(post)"
             >
                 <div class="flex items-start justify-between gap-3">
                     <h3 class="font-semibold text-slate-900">{{ post.title }}</h3>
@@ -182,8 +201,23 @@ async function confirmDelete() {
                 </div>
                 <div class="mt-4 flex items-center justify-between border-t border-slate-100 pt-3">
                     <span class="text-xs text-slate-400">{{ formatDateTime(post.scheduled_at) }}</span>
-                    <div class="flex items-center gap-2">
-                        <span v-if="post.media_links?.length" class="text-xs text-slate-400" title="Has media links">🔗 {{ post.media_links.length }}</span>
+                    <div class="flex items-center gap-1 sm:gap-2">
+                        <span v-if="post.media_files?.length" class="hidden sm:inline-block text-xs text-slate-400" title="Has attached media">📎 {{ post.media_files.length }}</span>
+                        <span v-if="post.media_links?.length" class="hidden sm:inline-block text-xs text-slate-400" title="Has media links">🔗 {{ post.media_links.length }}</span>
+                        <button
+                            type="button"
+                            class="rounded-lg px-2.5 py-1 text-xs font-medium text-brand-600 transition hover:bg-brand-50"
+                            @click.stop="copyScript(post)"
+                        >
+                            Copy
+                        </button>
+                        <button
+                            type="button"
+                            class="rounded-lg px-2.5 py-1 text-xs font-medium text-slate-600 transition hover:bg-slate-50"
+                            @click.stop="openEditor(post)"
+                        >
+                            Edit
+                        </button>
                         <button
                             type="button"
                             class="rounded-lg px-2.5 py-1 text-xs font-medium text-rose-600 transition hover:bg-rose-50"
@@ -247,6 +281,24 @@ async function confirmDelete() {
                                 @saved="posts.fetchToday().catch(() => {})"
                             />
                         </div>
+                    </div>
+                </div>
+            </Transition>
+        </Teleport>
+
+        <Teleport to="body">
+            <Transition name="modal">
+                <div
+                    v-if="detailOpen"
+                    class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm"
+                    @click.self="detailOpen = false"
+                >
+                    <div class="flex max-h-[90dvh] w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-slate-50 shadow-2xl">
+                        <ScriptDetailModal
+                            :post="detailPost"
+                            @close="detailOpen = false"
+                            @edit="openEditor(detailPost)"
+                        />
                     </div>
                 </div>
             </Transition>

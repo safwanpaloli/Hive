@@ -6,6 +6,8 @@ use App\Models\Post;
 use App\Models\SocialAccount;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class PostTest extends TestCase
@@ -136,5 +138,91 @@ class PostTest extends TestCase
         $this->actingAs($intruder)
             ->deleteJson("/api/v1/posts/{$post->id}")
             ->assertForbidden();
+    }
+
+    public function test_user_can_create_post_with_uploaded_media(): void
+    {
+        Storage::fake('public');
+        $user = $this->actingUser();
+
+        $response = $this->actingAs($user)
+            ->post('/api/v1/posts', [
+                'title' => 'Launch teaser',
+                'status' => 'draft',
+                'media_files' => [
+                    UploadedFile::fake()->image('hero.jpg', 200, 200),
+                    UploadedFile::fake()->createWithContent('brief.pdf', "%PDF-1.4\n1 0 obj\n<<>>\nendobj\n%%EOF\n"),
+                ],
+            ]);
+
+        $response->assertCreated()
+            ->assertJsonPath('post.title', 'Launch teaser');
+
+        $post = Post::find($response->json('post.id'));
+        $this->assertCount(2, $post->media_files);
+
+        foreach ($post->media_files as $media) {
+            Storage::disk('public')->assertExists('post-media/'.basename($media['url']));
+        }
+    }
+
+    public function test_user_can_update_post_and_removed_media_is_deleted(): void
+    {
+        Storage::fake('public');
+        $user = $this->actingUser();
+        $post = Post::factory()->create(['user_id' => $user->id, 'status' => 'draft']);
+
+        $keep = 'post-media/keep.pdf';
+        $drop = 'post-media/drop.pdf';
+        Storage::disk('public')->put($keep, 'keep');
+        Storage::disk('public')->put($drop, 'drop');
+
+        $post->update([
+            'media_files' => [
+                ['url' => Storage::disk('public')->url($keep), 'name' => 'keep.pdf', 'size' => 4, 'mime' => 'application/pdf'],
+                ['url' => Storage::disk('public')->url($drop), 'name' => 'drop.pdf', 'size' => 4, 'mime' => 'application/pdf'],
+            ],
+        ]);
+
+        $this->actingAs($user)
+            ->post("/api/v1/posts/{$post->id}", [
+                '_method' => 'PUT',
+                'title' => 'Updated title',
+                'status' => 'draft',
+                'existing_media_files' => json_encode([
+                    'url' => Storage::disk('public')->url($keep),
+                    'name' => 'keep.pdf',
+                    'size' => 4,
+                    'mime' => 'application/pdf',
+                ]),
+            ])
+            ->assertOk()
+            ->assertJsonPath('post.title', 'Updated title');
+
+        Storage::disk('public')->assertExists($keep);
+        Storage::disk('public')->assertMissing($drop);
+        $this->assertCount(1, $post->fresh()->media_files);
+    }
+
+    public function test_deleting_post_deletes_stored_media(): void
+    {
+        Storage::fake('public');
+        $user = $this->actingUser();
+        $post = Post::factory()->create(['user_id' => $user->id, 'status' => 'draft']);
+
+        $path = 'post-media/hero.jpg';
+        Storage::disk('public')->put($path, 'image');
+        $post->update([
+            'media_files' => [
+                ['url' => Storage::disk('public')->url($path), 'name' => 'hero.jpg', 'size' => 5, 'mime' => 'image/jpeg'],
+            ],
+        ]);
+
+        $this->actingAs($user)
+            ->deleteJson("/api/v1/posts/{$post->id}")
+            ->assertOk();
+
+        Storage::disk('public')->assertMissing($path);
+        $this->assertDatabaseMissing('posts', ['id' => $post->id]);
     }
 }

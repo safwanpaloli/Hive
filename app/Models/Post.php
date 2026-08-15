@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
-#[Fillable(['user_id', 'title', 'script_body', 'media_links', 'scheduled_at', 'status', 'posted_at'])]
+#[Fillable(['user_id', 'title', 'script_body', 'media_links', 'media_files', 'scheduled_at', 'status', 'posted_at'])]
 class Post extends Model
 {
     /** @use HasFactory<PostFactory> */
@@ -32,6 +32,7 @@ class Post extends Model
     {
         return [
             'media_links' => 'array',
+            'media_files' => 'array',
             'scheduled_at' => 'datetime',
             'posted_at' => 'datetime',
         ];

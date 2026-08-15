@@ -57,6 +57,14 @@ export function toLocalDatetime(value) {
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+export function compactNumber(value) {
+    if (value === null || value === undefined || Number.isNaN(Number(value))) return '—';
+    return new Intl.NumberFormat(undefined, {
+        notation: 'compact',
+        maximumFractionDigits: 1,
+    }).format(Number(value));
+}
+
 export function humanizePlatform(name) {
     const icons = {
         Facebook: '📘',
