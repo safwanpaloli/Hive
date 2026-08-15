@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
 import { useNotificationsStore } from '../stores/notifications';
@@ -17,6 +17,24 @@ const toast = useToast();
 const browserNotifications = useBrowserNotifications();
 
 const remindersEnabled = ref(localStorage.getItem('browser_notifications') === '1');
+
+const sidebarOpen = ref(false);
+
+function onKeydown(event) {
+    if (event.key === 'Escape') sidebarOpen.value = false;
+}
+
+onMounted(() => {
+    document.addEventListener('keydown', onKeydown);
+    if (auth.isAuthenticated) {
+        notifications.fetchNotifications().catch(() => {});
+        posts.fetchToday().catch(() => {});
+    }
+});
+
+onUnmounted(() => {
+    document.removeEventListener('keydown', onKeydown);
+});
 
 const navItems = [
     { name: 'dashboard', label: 'Today', icon: '🗓' },
@@ -37,12 +55,12 @@ const initials = computed(() => {
 
 const isTodayPage = computed(() => route.name === 'dashboard');
 
-onMounted(() => {
-    if (auth.isAuthenticated) {
-        notifications.fetchNotifications().catch(() => {});
-        posts.fetchToday().catch(() => {});
-    }
-});
+watch(
+    () => route.fullPath,
+    () => {
+        sidebarOpen.value = false;
+    },
+);
 
 watch(
     () => posts.today,
@@ -84,17 +102,34 @@ function refreshToday() {
 
 <template>
     <div class="flex min-h-screen">
+        <div
+            v-if="sidebarOpen"
+            class="fixed inset-0 z-30 bg-slate-900/40 backdrop-blur-sm lg:hidden"
+            @click="sidebarOpen = false"
+        ></div>
+
         <aside
-            class="fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-slate-200 bg-white"
+            class="fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-slate-200 bg-white transition-transform duration-200 ease-in-out lg:translate-x-0"
+            :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
         >
             <div class="flex items-center gap-2.5 px-6 py-5">
                 <div class="flex size-9 items-center justify-center rounded-xl bg-brand-600 text-lg text-white shadow-sm">
                     📅
                 </div>
-                <div>
+                <div class="min-w-0 flex-1">
                     <p class="text-sm font-bold tracking-tight text-slate-900">ContentVault</p>
                     <p class="text-[11px] text-slate-500">Social Planner</p>
                 </div>
+                <button
+                    type="button"
+                    title="Close menu"
+                    class="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 lg:hidden"
+                    @click="sidebarOpen = false"
+                >
+                    <svg class="size-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
             </div>
 
             <nav class="mt-2 flex-1 space-y-1 px-3">
@@ -143,22 +178,32 @@ function refreshToday() {
             </div>
         </aside>
 
-        <main class="ml-64 flex-1">
-            <header class="sticky top-0 z-30 border-b border-slate-200 bg-slate-50/80 px-8 py-4 backdrop-blur">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <h1 class="text-lg font-bold text-slate-900">
+        <main class="flex-1 lg:pl-64">
+            <header class="sticky top-0 z-30 border-b border-slate-200 bg-slate-50/80 px-4 py-3 backdrop-blur sm:px-6 lg:px-8 lg:py-4">
+                <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+                    <button
+                        type="button"
+                        title="Open menu"
+                        class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-white text-slate-600 ring-1 ring-inset ring-slate-200 transition hover:bg-slate-50 lg:hidden"
+                        @click="sidebarOpen = true"
+                    >
+                        <svg class="size-5" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5M3.75 17.25h16.5" />
+                        </svg>
+                    </button>
+                    <div class="mr-auto min-w-0">
+                        <h1 class="truncate text-base font-bold text-slate-900 sm:text-lg">
                             {{ navItems.find((n) => n.name === route.name)?.label || 'Dashboard' }}
                         </h1>
-                        <p class="text-xs text-slate-500">
+                        <p class="hidden text-xs text-slate-500 sm:block">
                             {{ new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }) }}
                         </p>
                     </div>
-                    <div class="flex items-center gap-3">
+                    <div class="flex items-center gap-2 sm:gap-3">
                         <button
                             type="button"
                             title="Toggle browser reminders"
-                            class="relative flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-sm font-medium ring-1 ring-slate-200 transition hover:bg-slate-50"
+                            class="flex size-9 items-center justify-center rounded-lg bg-white text-base ring-1 ring-inset ring-slate-200 transition hover:bg-slate-50 sm:size-auto sm:px-3 sm:py-2 sm:text-sm sm:font-medium"
                             :class="
                                 remindersEnabled
                                     ? 'text-brand-700 ring-brand-200 bg-brand-50'
@@ -167,23 +212,24 @@ function refreshToday() {
                             @click="toggleReminders"
                         >
                             <span>🔔</span>
-                            <span class="hidden sm:inline">{{ remindersEnabled ? 'Reminders on' : 'Enable reminders' }}</span>
+                            <span class="hidden sm:inline sm:ml-2">{{ remindersEnabled ? 'Reminders on' : 'Enable reminders' }}</span>
                         </button>
                         <button
                             v-if="notifications.unread > 0"
                             type="button"
-                            class="relative flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-sm font-medium text-slate-600 ring-1 ring-slate-200 transition hover:bg-slate-50"
+                            title="Mark all notifications as read"
+                            class="relative flex size-9 items-center justify-center rounded-lg bg-white text-slate-600 ring-1 ring-inset ring-slate-200 transition hover:bg-slate-50 sm:size-auto sm:gap-2 sm:px-3 sm:py-2 sm:text-sm sm:font-medium"
                             @click="notifications.markAllRead()"
                         >
                             <span>🔔</span>
-                            <span class="flex size-5 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white">
+                            <span class="absolute -right-1 -top-1 flex size-5 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white sm:static">
                                 {{ notifications.unread }}
                             </span>
-                            Mark read
+                            <span class="hidden sm:inline">Mark read</span>
                         </button>
                         <button
                             type="button"
-                            class="flex items-center gap-2 rounded-lg bg-brand-600 px-3.5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700"
+                            class="whitespace-nowrap rounded-lg bg-brand-600 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700 sm:px-4"
                             @click="isTodayPage ? refreshToday() : router.push({ name: 'scripts', query: { new: '1' } })"
                         >
                             {{ isTodayPage ? '↻ Refresh' : '+ New Script' }}
@@ -192,7 +238,7 @@ function refreshToday() {
                 </div>
             </header>
 
-            <section class="p-8">
+            <section class="p-4 sm:p-6 lg:p-8">
                 <RouterView />
             </section>
         </main>

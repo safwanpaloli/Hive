@@ -60,8 +60,8 @@ async function confirmDelete() {
 
 <template>
     <div class="space-y-5">
-        <div class="flex flex-wrap items-center gap-3">
-            <div class="relative min-w-52 flex-1">
+        <div class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+            <div class="relative flex-1 sm:min-w-56">
                 <svg
                     class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400"
                     fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"
@@ -75,20 +75,22 @@ async function confirmDelete() {
                     class="w-full rounded-xl border-0 bg-white py-2.5 pl-9 pr-3.5 text-sm shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-brand-500"
                 />
             </div>
-            <select
-                v-model="platformFilter"
-                class="rounded-xl border-0 bg-white px-3 py-2.5 text-sm shadow-sm ring-1 ring-inset ring-slate-300 focus:ring-2 focus:ring-brand-500"
-            >
-                <option value="">All platforms</option>
-                <option v-for="p in uniquePlatforms" :key="p" :value="p">{{ p }}</option>
-            </select>
-            <button
-                type="button"
-                class="rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700"
-                @click="openNew"
-            >
-                + Add account
-            </button>
+            <div class="flex gap-3">
+                <select
+                    v-model="platformFilter"
+                    class="min-w-0 flex-1 rounded-xl border-0 bg-white px-3 py-2.5 text-sm shadow-sm ring-1 ring-inset ring-slate-300 focus:ring-2 focus:ring-brand-500 sm:flex-none"
+                >
+                    <option value="">All platforms</option>
+                    <option v-for="p in uniquePlatforms" :key="p" :value="p">{{ p }}</option>
+                </select>
+                <button
+                    type="button"
+                    class="flex-1 whitespace-nowrap rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700 sm:flex-none"
+                    @click="openNew"
+                >
+                    + Add account
+                </button>
+            </div>
         </div>
 
         <div v-if="accounts.loading" class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -191,7 +193,7 @@ async function confirmDelete() {
                     class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm"
                     @click.self="modalOpen = false"
                 >
-                    <div class="w-full max-w-md rounded-2xl bg-white shadow-2xl">
+                    <div class="max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl bg-white shadow-2xl">
                         <div class="flex items-center justify-between border-b border-slate-200 px-6 py-4">
                             <h3 class="text-sm font-bold text-slate-900">
                                 {{ editing ? 'Edit account' : 'Add account' }}
