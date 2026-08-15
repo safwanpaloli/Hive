@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\SocialAccountRequest;
 use App\Models\SocialAccount;
+use App\Services\Analytics\SocialAnalyticsService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -23,9 +24,10 @@ class SocialAccountController extends Controller
         return response()->json(['accounts' => $accounts]);
     }
 
-    public function store(SocialAccountRequest $request): JsonResponse
+    public function store(SocialAccountRequest $request, SocialAnalyticsService $analytics): JsonResponse
     {
         $account = $request->user()->socialAccounts()->create($this->prepareData($request));
+        $analytics->forget($request->user());
 
         return response()->json(['account' => $account], 201);
     }
@@ -37,7 +39,7 @@ class SocialAccountController extends Controller
         return response()->json(['account' => $socialAccount]);
     }
 
-    public function update(SocialAccountRequest $request, SocialAccount $socialAccount): JsonResponse
+    public function update(SocialAccountRequest $request, SocialAccount $socialAccount, SocialAnalyticsService $analytics): JsonResponse
     {
         abort_if($socialAccount->user_id !== $request->user()->id, 403, 'You do not own this account.');
 
@@ -48,16 +50,18 @@ class SocialAccountController extends Controller
         }
 
         $socialAccount->update($data);
+        $analytics->forget($request->user());
 
         return response()->json(['account' => $socialAccount->fresh()]);
     }
 
-    public function destroy(Request $request, SocialAccount $socialAccount): JsonResponse
+    public function destroy(Request $request, SocialAccount $socialAccount, SocialAnalyticsService $analytics): JsonResponse
     {
         abort_if($socialAccount->user_id !== $request->user()->id, 403, 'You do not own this account.');
 
         $this->deleteAvatar($socialAccount);
         $socialAccount->delete();
+        $analytics->forget($request->user());
 
         return response()->json(['message' => 'Account deleted.']);
     }
@@ -82,8 +86,21 @@ class SocialAccountController extends Controller
 
     private function deleteAvatar(SocialAccount $socialAccount): void
     {
-        if ($socialAccount->avatar_url && str_contains($socialAccount->avatar_url, '/storage/avatars/')) {
-            Storage::disk('public')->delete(str_replace('/storage/', '', $socialAccount->avatar_url));
+        $relative = $this->relativeStoragePath((string) $socialAccount->avatar_url);
+
+        if ($relative !== null) {
+            Storage::disk('public')->delete($relative);
         }
+    }
+
+    private function relativeStoragePath(string $url): ?string
+    {
+        $prefix = Storage::disk('public')->url('');
+
+        if (! str_starts_with($url, $prefix)) {
+            return null;
+        }
+
+        return substr($url, strlen($prefix));
     }
 }

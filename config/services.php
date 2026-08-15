@@ -35,4 +35,18 @@ return [
         ],
     ],
 
+    'youtube' => [
+        'api_key' => env('YOUTUBE_API_KEY'),
+    ],
+
+    'facebook' => [
+        'access_token' => env('FACEBOOK_ACCESS_TOKEN'),
+    ],
+
+    'instagram' => [
+        'access_token' => env('INSTAGRAM_ACCESS_TOKEN'),
+    ],
+
+    'verify_ssl' => env('VERIFY_SSL', true),
+
 ];

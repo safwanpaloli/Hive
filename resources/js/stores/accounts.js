@@ -12,6 +12,8 @@ function multipartConfig(payload) {
 export const useAccountsStore = defineStore('accounts', {
     state: () => ({
         accounts: [],
+        analytics: null,
+        analyticsLoading: false,
         loading: false,
         error: null,
     }),
@@ -22,6 +24,16 @@ export const useAccountsStore = defineStore('accounts', {
     },
 
     actions: {
+        async fetchAnalytics(params = {}) {
+            this.analyticsLoading = true;
+            try {
+                const { data } = await client.get('/v1/analytics/social', { params });
+                this.analytics = data;
+                return data;
+            } finally {
+                this.analyticsLoading = false;
+            }
+        },
         async fetchAccounts() {
             this.loading = true;
             this.error = null;

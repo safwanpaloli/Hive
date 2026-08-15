@@ -9,6 +9,7 @@ use App\Models\Post;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Storage;
 
 class PostController extends Controller
 {
@@ -34,7 +35,10 @@ class PostController extends Controller
 
     public function store(PostRequest $request): JsonResponse
     {
-        $post = $request->user()->posts()->create($request->safe()->except('platform_ids'));
+        $data = $request->safe()->except(['platform_ids', 'media_files', 'existing_media_files']);
+        $data['media_files'] = $this->storeUploadedMedia($request);
+
+        $post = $request->user()->posts()->create($data);
 
         if ($request->filled('platform_ids')) {
             $post->platforms()->syncWithPivotValues(
@@ -57,7 +61,13 @@ class PostController extends Controller
     {
         abort_if($post->user_id !== $request->user()->id, 403, 'You do not own this post.');
 
-        $post->update($request->safe()->except('platform_ids'));
+        $data = $request->safe()->except(['platform_ids', 'media_files', 'existing_media_files']);
+
+        if ($request->hasFile('media_files') || $request->has('existing_media_files')) {
+            $data['media_files'] = $this->mergeMediaFiles($request, $post);
+        }
+
+        $post->update($data);
 
         if ($request->has('platform_ids')) {
             $post->platforms()->sync($request->input('platform_ids'));
@@ -70,9 +80,100 @@ class PostController extends Controller
     {
         abort_if($post->user_id !== $request->user()->id, 403, 'You do not own this post.');
 
+        $this->deleteStoredMedia($post);
         $post->delete();
 
         return response()->json(['message' => 'Post deleted.']);
+    }
+
+    /**
+     * Store freshly uploaded media files and return their metadata.
+     *
+     * @return array<int, array{url: string, name: string, size: int, mime: string}>
+     */
+    private function storeUploadedMedia(Request $request): array
+    {
+        $files = [];
+
+        if (! $request->hasFile('media_files')) {
+            return $files;
+        }
+
+        foreach ($request->file('media_files') as $file) {
+            if (! $file->isValid()) {
+                continue;
+            }
+
+            $path = $file->store('post-media', 'public');
+
+            $files[] = [
+                'url' => Storage::disk('public')->url($path),
+                'name' => $file->getClientOriginalName(),
+                'size' => $file->getSize(),
+                'mime' => $file->getMimeType(),
+            ];
+        }
+
+        return $files;
+    }
+
+    /**
+     * Merge retained existing media with freshly uploaded files,
+     * deleting any previously stored files that were removed.
+     *
+     * @return array<int, array{url: string, name: string, size: int, mime: string}>
+     */
+    private function mergeMediaFiles(PostRequest $request, Post $post): array
+    {
+        $existing = [];
+
+        if ($request->filled('existing_media_files')) {
+            $decoded = json_decode((string) $request->input('existing_media_files'), true);
+
+            if (is_array($decoded)) {
+                $existing = array_is_list($decoded) ? $decoded : [$decoded];
+            }
+        }
+
+        $files = array_values(array_filter(
+            array_merge($existing, $this->storeUploadedMedia($request)),
+            fn ($media) => is_array($media) && isset($media['url'])
+        ));
+
+        $oldUrls = collect($post->media_files ?? [])->pluck('url')->all();
+        $keepUrls = collect($files)->pluck('url')->all();
+
+        foreach (array_diff($oldUrls, $keepUrls) as $url) {
+            $relative = $this->relativeStoragePath($url);
+            if ($relative !== null) {
+                Storage::disk('public')->delete($relative);
+            }
+        }
+
+        return $files;
+    }
+
+    private function deleteStoredMedia(Post $post): void
+    {
+        foreach ($post->media_files ?? [] as $media) {
+            if (isset($media['url'])) {
+                $relative = $this->relativeStoragePath($media['url']);
+                if ($relative !== null) {
+                    Storage::disk('public')->delete($relative);
+                }
+            }
+        }
+    }
+
+    private function relativeStoragePath(string $url): ?string
+    {
+        $prefix = Storage::disk('public')->url('');
+
+        if (! str_starts_with($url, $prefix)) {
+            return null;
+        }
+
+        return substr($url, strlen($prefix));
     }
 
     public function updateStatus(UpdatePostStatusRequest $request, Post $post): JsonResponse

@@ -1,6 +1,14 @@
 import { defineStore } from 'pinia';
 import client from '../api/client';
 
+function multipartConfig(payload) {
+    // Let the browser set the multipart boundary automatically for FormData.
+    if (payload instanceof FormData) {
+        return { headers: { 'Content-Type': undefined } };
+    }
+    return {};
+}
+
 export const usePostsStore = defineStore('posts', {
     state: () => ({
         today: { date: null, total: 0, posted: 0, pending: 0, posts: [] },
@@ -56,13 +64,23 @@ export const usePostsStore = defineStore('posts', {
         },
 
         async createPost(payload) {
-            const { data } = await client.post('/v1/posts', payload);
+            const { data } = await client.post('/v1/posts', payload, multipartConfig(payload));
             this.posts.unshift(data.post);
             return data.post;
         },
 
         async updatePost(id, payload) {
-            const { data } = await client.put(`/v1/posts/${id}`, payload);
+            // The PHP built-in server only parses multipart bodies for POST,
+            // so FormData updates use POST + `_method` spoofing (Laravel pattern).
+            if (payload instanceof FormData) {
+                payload.append('_method', 'PUT');
+                const { data } = await client.post(`/v1/posts/${id}`, payload, multipartConfig(payload));
+                const idx = this.posts.findIndex((p) => p.id === id);
+                if (idx !== -1) this.posts[idx] = data.post;
+                return data.post;
+            }
+
+            const { data } = await client.put(`/v1/posts/${id}`, payload, multipartConfig(payload));
             const idx = this.posts.findIndex((p) => p.id === id);
             if (idx !== -1) this.posts[idx] = data.post;
             return data.post;

@@ -17,6 +17,7 @@ const saving = ref(false);
 const errors = ref({});
 const avatarFile = ref(null);
 const avatarPreview = ref('');
+const credential = ref('');
 
 const form = reactive({
     platform_name: '',
@@ -24,6 +25,25 @@ const form = reactive({
     profile_url: '',
     account_type: '',
     notes: '',
+});
+
+const credentialField = computed(() => {
+    const platform = form.platform_name.trim().toLowerCase();
+    if (platform === 'youtube') return { key: 'api_key', label: 'YouTube API key', placeholder: 'AIza…' };
+    if (platform === 'facebook') return { key: 'access_token', label: 'Facebook page access token', placeholder: 'EAAG…' };
+    if (platform === 'instagram') return { key: 'access_token', label: 'Instagram access token', placeholder: 'EAAG…' };
+    return { key: 'access_token', label: 'Access token', placeholder: 'Paste token…' };
+});
+
+const credentialHint = computed(() => {
+    const platform = form.platform_name.trim().toLowerCase();
+    if (platform === 'youtube') {
+        return 'Google API key with the YouTube Data API v3 enabled — used for live analytics. Leave empty to clear.';
+    }
+    if (platform === 'facebook' || platform === 'instagram') {
+        return 'Meta Graph API access token (starts with EAAG…) from a Facebook app connected to your page/Instagram Business account. Leave empty to clear.';
+    }
+    return 'Used for live analytics on this platform. Leave empty to clear.';
 });
 
 const isEditing = ref(false);
@@ -37,6 +57,7 @@ function reset() {
         form.account_type = props.account.account_type || '';
         form.notes = props.account.notes || '';
         avatarPreview.value = props.account.avatar_url || '';
+        credential.value = props.account.credentials?.[credentialField.value.key] || '';
     } else {
         form.platform_name = '';
         form.handle = '';
@@ -45,6 +66,7 @@ function reset() {
         form.notes = '';
         avatarPreview.value = '';
     }
+    credential.value = '';
     avatarFile.value = null;
     errors.value = {};
 }
@@ -75,6 +97,10 @@ function clearAvatar() {
 }
 
 function buildPayload() {
+    const credentialsPayload = credential.value.trim()
+        ? { [credentialField.value.key]: credential.value.trim() }
+        : null;
+
     if (avatarFile.value) {
         const payload = new FormData();
         payload.append('platform_name', form.platform_name);
@@ -83,11 +109,14 @@ function buildPayload() {
         payload.append('account_type', form.account_type || '');
         payload.append('notes', form.notes || '');
         payload.append('avatar', avatarFile.value);
+        if (credentialsPayload) {
+            payload.append(`credentials[${credentialField.value.key}]`, credentialsPayload[credentialField.value.key]);
+        }
         return payload;
     }
 
     // No new file: keep the existing avatar unless the user cleared it.
-    return { ...form, avatar_url: avatarPreview.value || '' };
+    return { ...form, avatar_url: avatarPreview.value || '', credentials: credentialsPayload };
 }
 
 async function save() {
@@ -207,6 +236,24 @@ async function save() {
                 placeholder="https://instagram.com/yourhandle"
             />
             <p v-if="errors.profile_url" class="mt-1 text-xs text-rose-600">{{ errors.profile_url[0] }}</p>
+        </div>
+
+        <div>
+            <label for="acc-credential" class="mb-1.5 block text-sm font-medium text-slate-700">
+                {{ credentialField.label }}
+                <span class="font-normal text-slate-400">(optional)</span>
+            </label>
+            <input
+                id="acc-credential"
+                v-model="credential"
+                type="password"
+                autocomplete="off"
+                :placeholder="credentialField.placeholder"
+                class="w-full rounded-xl border-0 bg-white px-3.5 py-2.5 text-sm shadow-sm ring-1 ring-inset ring-slate-300 focus:ring-2 focus:ring-brand-500"
+            />
+            <p class="mt-1 text-xs text-slate-400">
+                {{ credentialHint }}
+            </p>
         </div>
 
         <div>

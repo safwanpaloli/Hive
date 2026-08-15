@@ -37,10 +37,12 @@ onUnmounted(() => {
 });
 
 const navItems = [
-    { name: 'dashboard', label: 'Today', icon: '🗓' },
+    { name: 'dashboard', label: 'Dashboard', icon: '📊' },
+    { name: 'today', label: 'Today', icon: '🗓' },
     { name: 'scripts', label: 'Script Studio', icon: '✍️' },
     { name: 'accounts', label: 'Account Vault', icon: '🔐' },
     { name: 'analytics', label: 'Analytics', icon: '📈' },
+    { name: 'profile', label: 'Profile', icon: '👤' },
 ];
 
 const initials = computed(() => {
@@ -53,7 +55,7 @@ const initials = computed(() => {
         .toUpperCase();
 });
 
-const isTodayPage = computed(() => route.name === 'dashboard');
+const isTodayPage = computed(() => route.name === 'today');
 
 watch(
     () => route.fullPath,
@@ -147,7 +149,7 @@ function refreshToday() {
                     <span class="text-base leading-none">{{ item.icon }}</span>
                     {{ item.label }}
                     <span
-                        v-if="item.name === 'dashboard'"
+                        v-if="item.name === 'today'"
                         class="ml-auto rounded-full bg-brand-100 px-2 py-0.5 text-[10px] font-semibold text-brand-700"
                     >
                         {{ isTodayPage ? 'now' : '' }}
@@ -156,7 +158,10 @@ function refreshToday() {
             </nav>
 
             <div class="border-t border-slate-100 p-3">
-                <div class="flex items-center gap-3 rounded-xl bg-slate-50 px-3 py-2.5">
+                <RouterLink
+                    :to="{ name: 'profile' }"
+                    class="flex items-center gap-3 rounded-xl bg-slate-50 px-3 py-2.5 transition hover:bg-slate-100"
+                >
                     <div class="flex size-9 shrink-0 items-center justify-center rounded-full bg-brand-600 text-xs font-bold text-white">
                         {{ initials }}
                     </div>
@@ -168,13 +173,13 @@ function refreshToday() {
                         type="button"
                         title="Sign out"
                         class="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-200 hover:text-slate-700"
-                        @click="handleLogout"
+                        @click.stop="handleLogout"
                     >
                         <svg class="size-4" fill="none" viewBox="0 0 24 24" stroke-width="1.8" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15m3 0l3-3m0 0l-3-3m3 3H9" />
                         </svg>
                     </button>
-                </div>
+                </RouterLink>
             </div>
         </aside>
 

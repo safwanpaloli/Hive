@@ -19,6 +19,11 @@ const routes = [
                 component: () => import('../views/DashboardView.vue'),
             },
             {
+                path: 'today',
+                name: 'today',
+                component: () => import('../views/TodayView.vue'),
+            },
+            {
                 path: 'scripts',
                 name: 'scripts',
                 component: () => import('../views/ScriptStudioView.vue'),
@@ -32,6 +37,11 @@ const routes = [
                 path: 'analytics',
                 name: 'analytics',
                 component: () => import('../views/AnalyticsView.vue'),
+            },
+            {
+                path: 'profile',
+                name: 'profile',
+                component: () => import('../views/ProfileView.vue'),
             },
         ],
     },
