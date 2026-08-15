@@ -76,7 +76,7 @@ function openEditor(post) {
 
 <template>
     <div class="space-y-6">
-        <div class="rounded-2xl bg-brand-700 p-6 text-white shadow-sm">
+        <div class="rounded-2xl bg-brand-700 p-5 text-white shadow-sm sm:p-6">
             <div class="flex flex-wrap items-center justify-between gap-4">
                 <div>
                     <h2 class="text-2xl font-bold tracking-tight">{{ greeting }}</h2>
@@ -127,7 +127,7 @@ function openEditor(post) {
 
         <div v-else class="space-y-4">
             <div class="rounded-2xl bg-white shadow-sm ring-1 ring-slate-200">
-                <div class="border-b border-slate-100 px-6 py-4">
+                <div class="border-b border-slate-100 px-4 py-4 sm:px-6">
                     <h3 class="text-sm font-semibold text-slate-900">Your queue · {{ sortedPosts.length }}</h3>
                 </div>
 
@@ -135,7 +135,7 @@ function openEditor(post) {
                     <li
                         v-for="post in sortedPosts"
                         :key="post.id"
-                        class="group flex flex-col gap-3 px-6 py-4 transition hover:bg-slate-50 sm:flex-row sm:items-center sm:justify-between"
+                        class="group flex flex-col gap-3 px-4 py-4 transition hover:bg-slate-50 sm:flex-row sm:items-center sm:justify-between sm:px-6"
                     >
                         <div class="min-w-0">
                             <div class="flex flex-wrap items-center gap-2">
@@ -155,7 +155,7 @@ function openEditor(post) {
                             </div>
                         </div>
 
-                        <div class="flex shrink-0 items-center gap-2">
+                        <div class="flex shrink-0 flex-wrap items-center gap-2">
                             <button
                                 type="button"
                                 class="rounded-lg px-3 py-1.5 text-xs font-medium text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"

@@ -82,65 +82,69 @@ async function confirmDelete() {
 
 <template>
     <div class="space-y-5">
-        <div class="flex flex-wrap items-center gap-3">
-            <div class="relative min-w-52 flex-1">
-                <svg
-                    class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400"
-                    fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"
+        <div class="space-y-3">
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <div class="relative flex-1">
+                    <svg
+                        class="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400"
+                        fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"
+                    >
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 10.5a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z" />
+                    </svg>
+                    <input
+                        v-model="search"
+                        type="text"
+                        placeholder="Search scripts…"
+                        class="w-full rounded-xl border-0 bg-white py-2.5 pl-9 pr-3.5 text-sm shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-brand-500"
+                        @keyup.enter="applyFilters"
+                    />
+                </div>
+                <button
+                    type="button"
+                    class="w-full whitespace-nowrap rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700 sm:w-auto"
+                    @click="openEditor(null)"
                 >
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 10.5a6.5 6.5 0 11-13 0 6.5 6.5 0 0113 0z" />
-                </svg>
-                <input
-                    v-model="search"
-                    type="text"
-                    placeholder="Search scripts…"
-                    class="w-full rounded-xl border-0 bg-white py-2.5 pl-9 pr-3.5 text-sm shadow-sm ring-1 ring-inset ring-slate-300 placeholder:text-slate-400 focus:ring-2 focus:ring-brand-500"
-                    @keyup.enter="applyFilters"
-                />
+                    + New script
+                </button>
             </div>
-            <select
-                v-model="filterStatus"
-                class="rounded-xl border-0 bg-white px-3 py-2.5 text-sm shadow-sm ring-1 ring-inset ring-slate-300 focus:ring-2 focus:ring-brand-500"
-                @change="applyFilters"
-            >
-                <option value="">All statuses</option>
-                <option v-for="s in statuses" :key="s" :value="s">{{ s[0].toUpperCase() + s.slice(1) }}</option>
-            </select>
-            <select
-                v-model="filterPlatform"
-                class="rounded-xl border-0 bg-white px-3 py-2.5 text-sm shadow-sm ring-1 ring-inset ring-slate-300 focus:ring-2 focus:ring-brand-500"
-                @change="applyFilters"
-            >
-                <option value="">All platforms</option>
-                <option v-for="p in accounts.platformNames" :key="p" :value="p">{{ p }}</option>
-            </select>
-            <input
-                v-model="filterFrom"
-                type="date"
-                class="rounded-xl border-0 bg-white px-3 py-2.5 text-sm shadow-sm ring-1 ring-inset ring-slate-300 focus:ring-2 focus:ring-brand-500"
-                @change="applyFilters"
-            />
-            <input
-                v-model="filterTo"
-                type="date"
-                class="rounded-xl border-0 bg-white px-3 py-2.5 text-sm shadow-sm ring-1 ring-inset ring-slate-300 focus:ring-2 focus:ring-brand-500"
-                @change="applyFilters"
-            />
-            <button
-                v-if="hasActiveFilters"
-                type="button"
-                class="rounded-xl bg-white px-3.5 py-2.5 text-sm font-medium text-slate-500 ring-1 ring-inset ring-slate-300 transition hover:text-slate-800"
-                @click="resetFilters"
-            >
-                Clear
-            </button>
-            <button
-                type="button"
-                class="rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-brand-700"
-                @click="openEditor(null)"
-            >
-                + New script
-            </button>
+            <div class="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:items-center">
+                <select
+                    v-model="filterStatus"
+                    class="rounded-xl border-0 bg-white px-3 py-2.5 text-sm shadow-sm ring-1 ring-inset ring-slate-300 focus:ring-2 focus:ring-brand-500"
+                    @change="applyFilters"
+                >
+                    <option value="">All statuses</option>
+                    <option v-for="s in statuses" :key="s" :value="s">{{ s[0].toUpperCase() + s.slice(1) }}</option>
+                </select>
+                <select
+                    v-model="filterPlatform"
+                    class="rounded-xl border-0 bg-white px-3 py-2.5 text-sm shadow-sm ring-1 ring-inset ring-slate-300 focus:ring-2 focus:ring-brand-500"
+                    @change="applyFilters"
+                >
+                    <option value="">All platforms</option>
+                    <option v-for="p in accounts.platformNames" :key="p" :value="p">{{ p }}</option>
+                </select>
+                <input
+                    v-model="filterFrom"
+                    type="date"
+                    class="rounded-xl border-0 bg-white px-3 py-2.5 text-sm shadow-sm ring-1 ring-inset ring-slate-300 focus:ring-2 focus:ring-brand-500"
+                    @change="applyFilters"
+                />
+                <input
+                    v-model="filterTo"
+                    type="date"
+                    class="rounded-xl border-0 bg-white px-3 py-2.5 text-sm shadow-sm ring-1 ring-inset ring-slate-300 focus:ring-2 focus:ring-brand-500"
+                    @change="applyFilters"
+                />
+                <button
+                    v-if="hasActiveFilters"
+                    type="button"
+                    class="rounded-xl bg-white px-3.5 py-2.5 text-sm font-medium text-slate-500 ring-1 ring-inset ring-slate-300 transition hover:text-slate-800"
+                    @click="resetFilters"
+                >
+                    Clear
+                </button>
+            </div>
         </div>
 
         <div v-if="posts.loading" class="grid grid-cols-1 gap-4 lg:grid-cols-2">
